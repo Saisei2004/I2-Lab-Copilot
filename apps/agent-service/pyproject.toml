@@ -1,0 +1,24 @@
+[project]
+name = "i2-agent-service"
+version = "0.1.0"
+description = "ADK エージェント実行サービス（HTTP / Pub-Sub push 受信）"
+requires-python = ">=3.13"
+dependencies = [
+    "i2-core",
+    "i2-storage",
+    "i2-agents",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/i2_agent_service"]
+
+[tool.uv.sources]
+i2-core = { workspace = true }
+i2-storage = { workspace = true }
+i2-agents = { workspace = true }

@@ -1,0 +1,23 @@
+name: タスク (Task)
+description: 開発タスク / サブタスク
+title: "[Task] "
+labels: ["type:task"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: 概要
+    validations:
+      required: true
+  - type: textarea
+    id: todo
+    attributes:
+      label: ToDo
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+  - type: input
+    id: epic
+    attributes:
+      label: 親 Epic / 関連 Issue
+      placeholder: "#1"

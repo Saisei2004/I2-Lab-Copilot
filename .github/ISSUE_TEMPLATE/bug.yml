@@ -1,0 +1,26 @@
+name: バグ (Bug)
+description: 不具合の報告
+title: "[Bug] "
+labels: ["type:bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: 事象
+      description: 何が起きたか / 期待した挙動
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: 再現手順
+      placeholder: |
+        1. Discord で /record start
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: ログ / スクショ
+      description: Cloud Logging の該当ログなど

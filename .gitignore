@@ -1,0 +1,51 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.python-version.local
+
+# --- uv ---
+# uv.lock is committed on purpose (reproducible builds)
+
+# --- Env / secrets ---
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+service-account*.json
+gha-creds-*.json
+
+# --- Tooling caches ---
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+.pyright/
+.coverage
+htmlcov/
+
+# --- Terraform ---
+infra/terraform/.terraform/
+infra/terraform/*.tfstate
+infra/terraform/*.tfstate.*
+infra/terraform/*.tfvars
+!infra/terraform/*.tfvars.example
+infra/terraform/.terraform.lock.hcl
+
+# --- Runtime artifacts ---
+recordings/
+*.wav
+*.pcm
+tmp/
+outputs/
+work/
+
+# --- OS / Editor ---
+.DS_Store
+.idea/
+.vscode/

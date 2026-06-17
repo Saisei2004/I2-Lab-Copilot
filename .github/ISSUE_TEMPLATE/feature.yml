@@ -1,0 +1,41 @@
+name: 機能 (Feature)
+description: 新機能・拡張の提案
+title: "[Feat] "
+labels: ["type:feature"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: 目的 / ユーザーストーリー
+      description: 誰が、何を、なぜ
+      placeholder: "研修室メンバーとして、会議要約を Discord で受け取りたい。なぜなら…"
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 受け入れ条件 (Acceptance Criteria)
+      placeholder: |
+        - [ ] /record stop で要約が #要約 に投稿される
+        - [ ] 個人 FB が DM で届く
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: 技術メモ / 関連
+      description: 関連 Issue、影響パッケージ、参考リンクなど
+  - type: dropdown
+    id: area
+    attributes:
+      label: 対象エリア
+      options:
+        - discord-bot
+        - agent-service
+        - agents
+        - storage
+        - integrations
+        - infra
+        - docs
+    validations:
+      required: true

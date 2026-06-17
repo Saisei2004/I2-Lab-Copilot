@@ -1,0 +1,4 @@
+project_id             = "nakazawa-laborary"
+region                 = "asia-northeast1"
+recordings_bucket_name = "i2-lab-copilot-recordings"
+github_repo            = "Saisei2004/I2-Lab-Copilot"
