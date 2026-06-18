@@ -21,7 +21,7 @@ from i2_core.config import settings
 from i2_core.ids import new_meeting_id
 from i2_core.logging import get_logger
 from i2_core.pubsub import publish
-from i2_storage.firestore import MeetingRepository
+from i2_storage import get_meeting_store
 from i2_storage.gcs import upload_bytes
 from i2_storage.models import Meeting, MeetingStatus
 
@@ -42,7 +42,7 @@ class RecordingManager:
 
     def __init__(self) -> None:
         self._sessions: dict[int, _Session] = {}
-        self._meetings = MeetingRepository()
+        self._meetings = get_meeting_store()
 
     async def start(self, ctx: discord.ApplicationContext) -> None:
         if ctx.guild.id in self._sessions:

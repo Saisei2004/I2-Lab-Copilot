@@ -22,6 +22,9 @@ class Settings(BaseSettings):
 
     # Storage
     gcs_bucket_recordings: str = Field(default="i2-lab-copilot-recordings")
+    # データ backend: "memory"（権限不要・既定） | "firestore"（本番）
+    # firestore + FIRESTORE_EMULATOR_HOST 設定でローカルエミュレータに接続できる
+    storage_backend: str = Field(default="memory")
 
     # Models
     gemini_model: str = Field(default="gemini-2.5-pro")

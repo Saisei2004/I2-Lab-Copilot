@@ -22,7 +22,7 @@ from i2_integrations.transcription import (
     transcribe_track,
     transcript_to_text,
 )
-from i2_storage.firestore import FeedbackRepository, MeetingRepository
+from i2_storage import get_feedback_store, get_meeting_store
 from i2_storage.models import Feedback, MeetingStatus
 
 log = get_logger("i2_agent_service.pipeline")
@@ -41,8 +41,8 @@ def _gcs_uri(prefix: str, speaker_id: str) -> str:
 
 
 async def run_pipeline(event: RecordingEvent) -> None:
-    meetings = MeetingRepository()
-    feedbacks = FeedbackRepository()
+    meetings = get_meeting_store()
+    feedbacks = get_feedback_store()
     log.info("pipeline_start", meeting_id=event.meeting_id, speakers=event.speakers)
 
     # 1. 文字起こし（話者ごと）→ マージ

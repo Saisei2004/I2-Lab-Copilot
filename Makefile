@@ -43,3 +43,7 @@ tf-init: ## Terraform 初期化
 
 tf-plan: ## Terraform 差分確認
 	cd infra/terraform && terraform plan
+
+firestore-emulator: ## Firestore エミュレータを起動（権限不要のローカルDB）
+	@echo "別ターミナルで実行し、.env に FIRESTORE_EMULATOR_HOST=localhost:8080 と STORAGE_BACKEND=firestore を設定"
+	gcloud emulators firestore start --host-port=localhost:8080
