@@ -45,12 +45,22 @@ class RecordingManager:
         self._meetings = get_meeting_store()
 
     async def start(self, ctx: discord.ApplicationContext) -> None:
+        # ボイス接続は3秒を超え得るため、先に defer して interaction を延長する
+        await ctx.defer()
+
         if ctx.guild.id in self._sessions:
-            await ctx.respond("既に録音中です。`/record stop` で停止してください。", ephemeral=True)
+            await ctx.followup.send(
+                "既に録音中です。`/record stop` で停止してください。", ephemeral=True
+            )
             return
 
         channel = ctx.author.voice.channel
-        vc = await channel.connect()
+        try:
+            vc = await channel.connect()
+        except Exception as exc:
+            log.warning("voice_connect_failed", error=str(exc))
+            await ctx.followup.send(f"ボイス接続に失敗しました: {exc}", ephemeral=True)
+            return
         meeting_id = new_meeting_id(ctx.guild.id)
         participants = [str(m.id) for m in channel.members if not m.bot]
         session = _Session(
@@ -82,18 +92,19 @@ class RecordingManager:
             ctx.channel,
             meeting_id,
         )
-        await ctx.respond(
-            f"🔴 録音を開始しました（{channel.name}）。"
-            f"\n※ この会議は録音されます（<#{settings.discord_consent_channel_id}> 参照）。"
-        )
+        msg = f"🔴 録音を開始しました（{channel.name}）。"
+        if settings.discord_consent_channel_id:
+            msg += f"\n※ この会議は録音されます（<#{settings.discord_consent_channel_id}> 参照）。"
+        await ctx.followup.send(msg)
 
     async def stop(self, ctx: discord.ApplicationContext) -> None:
+        await ctx.defer()
         session = self._sessions.get(ctx.guild.id)
         if not session:
-            await ctx.respond("録音は開始されていません。", ephemeral=True)
+            await ctx.followup.send("録音は開始されていません。", ephemeral=True)
             return
         session.vc.stop_recording()  # → _on_recording_finished が呼ばれる
-        await ctx.respond("⏹️ 録音を停止しました。要約を作成します…")
+        await ctx.followup.send("⏹️ 録音を停止しました。後処理（保存・要約）を実行します…")
 
     async def _on_recording_finished(
         self,
@@ -107,28 +118,40 @@ class RecordingManager:
         speakers = [str(uid) for uid in sink.audio_data]
         log.info("recording_finished", meeting_id=meeting_id, speakers=speakers)
 
+        # 取り残し防止: まず必ず VC から退出する
         with contextlib.suppress(Exception):
             await sink.vc.disconnect()
 
-        # 話者別 WAV を GCS へ
-        for user_id, audio in sink.audio_data.items():
-            data = audio.file.read()
-            await asyncio.to_thread(upload_bytes, data, f"{meeting_id}/{user_id}.wav")
+        if not speakers:
+            await channel.send("録音を停止しました（音声データなし）。")
+            return
 
-        await asyncio.to_thread(
-            self._meetings.update_status, meeting_id, MeetingStatus.TRANSCRIBING.value
-        )
+        # GCS 保存 → Pub/Sub 発火。権限が無い環境ではここで失敗するが、
+        # Bot は落とさずユーザーに状況を伝える。
+        try:
+            for user_id, audio in sink.audio_data.items():
+                data = audio.file.read()
+                await asyncio.to_thread(upload_bytes, data, f"{meeting_id}/{user_id}.wav")
+            await asyncio.to_thread(
+                self._meetings.update_status, meeting_id, MeetingStatus.TRANSCRIBING.value
+            )
+            await asyncio.to_thread(
+                publish,
+                settings.pubsub_topic_recording_done,
+                {
+                    "meeting_id": meeting_id,
+                    "guild_id": str(guild_id),
+                    "channel_id": str(session.channel_id if session else channel.id),
+                    "gcs_prefix": meeting_id,
+                    "speakers": speakers,
+                },
+            )
+        except Exception as exc:
+            log.warning("post_recording_failed", meeting_id=meeting_id, error=str(exc))
+            await channel.send(
+                f"録音は完了（話者 {len(speakers)} 名）。"
+                f"ただし保存/要約はGCP権限が未設定のためスキップしました。"
+            )
+            return
 
-        # 後段（agent-service）を起動
-        await asyncio.to_thread(
-            publish,
-            settings.pubsub_topic_recording_done,
-            {
-                "meeting_id": meeting_id,
-                "guild_id": str(guild_id),
-                "channel_id": str(session.channel_id if session else channel.id),
-                "gcs_prefix": meeting_id,
-                "speakers": speakers,
-            },
-        )
         await channel.send(f"録音完了（話者 {len(speakers)} 名）。文字起こしと要約を開始します。")
