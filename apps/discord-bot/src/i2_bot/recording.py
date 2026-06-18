@@ -63,15 +63,38 @@ class RecordingManager:
             return
         meeting_id = new_meeting_id(ctx.guild.id)
         participants = [str(m.id) for m in channel.members if not m.bot]
-        session = _Session(
+
+        # per-user で WAV を受信（話者分離が録音時点で確定）。
+        # 注意: Discord の DAVE(E2EE) 展開により py-cord の voice receive は現在
+        # 動作しないことがある（pycord #3139）。失敗しても固まらないよう捕捉する。
+        try:
+            vc.start_recording(
+                discord.sinks.WaveSink(),
+                self._on_recording_finished,
+                ctx.channel,
+                meeting_id,
+            )
+        except Exception as exc:
+            log.warning("start_recording_failed", error=str(exc))
+            with contextlib.suppress(Exception):
+                await vc.disconnect()
+            await ctx.followup.send(
+                "⚠️ 録音を開始できませんでした。\n"
+                "Discord の音声E2E暗号化(DAVE)の影響で、py-cord の録音(voice receive)機能が"
+                "現在動作しません（上流の既知issue #3139）。\n"
+                "コマンドや要約パイプライン等、他機能は利用可能です。",
+                ephemeral=True,
+            )
+            return
+
+        # 録音開始に成功したらセッション登録
+        self._sessions[ctx.guild.id] = _Session(
             meeting_id=meeting_id,
             vc=vc,
             channel_id=ctx.channel.id,
             started_at=utcnow().isoformat(),
             participants=participants,
         )
-        self._sessions[ctx.guild.id] = session
-
         await asyncio.to_thread(
             self._meetings.create,
             Meeting(
@@ -84,14 +107,6 @@ class RecordingManager:
                 status=MeetingStatus.RECORDING,
             ),
         )
-
-        # per-user で WAV を受信（話者分離が録音時点で確定）
-        vc.start_recording(
-            discord.sinks.WaveSink(),
-            self._on_recording_finished,
-            ctx.channel,
-            meeting_id,
-        )
         msg = f"🔴 録音を開始しました（{channel.name}）。"
         if settings.discord_consent_channel_id:
             msg += f"\n※ この会議は録音されます（<#{settings.discord_consent_channel_id}> 参照）。"
@@ -99,11 +114,18 @@ class RecordingManager:
 
     async def stop(self, ctx: discord.ApplicationContext) -> None:
         await ctx.defer()
-        session = self._sessions.get(ctx.guild.id)
+        session = self._sessions.pop(ctx.guild.id, None)
         if not session:
             await ctx.followup.send("録音は開始されていません。", ephemeral=True)
             return
-        session.vc.stop_recording()  # → _on_recording_finished が呼ばれる
+        try:
+            session.vc.stop_recording()  # → _on_recording_finished が呼ばれる
+        except Exception as exc:
+            log.warning("stop_recording_failed", error=str(exc))
+            with contextlib.suppress(Exception):
+                await session.vc.disconnect()
+            await ctx.followup.send(f"停止処理でエラーが発生しました: {exc}", ephemeral=True)
+            return
         await ctx.followup.send("⏹️ 録音を停止しました。後処理（保存・要約）を実行します…")
 
     async def _on_recording_finished(
