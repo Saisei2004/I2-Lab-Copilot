@@ -6,6 +6,7 @@ requires-python = ">=3.13"
 dependencies = [
     "i2-core",
     "i2-storage",
+    "i2-integrations",
     "i2-agents",
     "fastapi>=0.115",
     "uvicorn[standard]>=0.30",

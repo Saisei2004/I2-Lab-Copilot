@@ -926,6 +926,7 @@ dependencies = [
     { name = "fastapi" },
     { name = "i2-agents" },
     { name = "i2-core" },
+    { name = "i2-integrations" },
     { name = "i2-storage" },
     { name = "uvicorn", extra = ["standard"] },
 ]
@@ -935,6 +936,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.115" },
     { name = "i2-agents", editable = "packages/agents" },
     { name = "i2-core", editable = "packages/core" },
+    { name = "i2-integrations", editable = "packages/integrations" },
     { name = "i2-storage", editable = "packages/storage" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30" },
 ]
@@ -963,6 +965,7 @@ name = "i2-core"
 version = "0.1.0"
 source = { editable = "packages/core" }
 dependencies = [
+    { name = "google-cloud-pubsub" },
     { name = "google-cloud-secret-manager" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
@@ -971,6 +974,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "google-cloud-pubsub", specifier = ">=2.21" },
     { name = "google-cloud-secret-manager", specifier = ">=2.20" },
     { name = "pydantic", specifier = ">=2.7" },
     { name = "pydantic-settings", specifier = ">=2.3" },

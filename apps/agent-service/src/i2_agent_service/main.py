@@ -3,7 +3,8 @@
 - GET  /healthz            : ヘルスチェック（Cloud Run）
 - POST /pubsub/recording   : Pub/Sub push 受信 → 文字起こし→要約→個人FB のパイプライン起動
 
-NOTE: 初期スケルトン。ADK Runner との結線・パイプライン本体は Issue で実装。
+長尺会議では STT が ack 期限を超え得るため、サブスクリプションの ack_deadline は長めに設定し、
+失敗時は Pub/Sub の再配信に任せる（パイプラインは冪等性を意識して実装する）。
 """
 
 from __future__ import annotations
@@ -13,6 +14,7 @@ import json
 
 from fastapi import FastAPI, Request
 
+from i2_agent_service.pipeline import RecordingEvent, run_pipeline
 from i2_core.logging import get_logger
 
 log = get_logger("i2_agent_service")
@@ -24,19 +26,21 @@ async def healthz() -> dict[str, str]:
     return {"status": "ok"}
 
 
+def _decode_pubsub(envelope: dict) -> dict:
+    message = envelope.get("message", {})
+    if message.get("data"):
+        return json.loads(base64.b64decode(message["data"]).decode("utf-8"))
+    return {}
+
+
 @app.post("/pubsub/recording")
 async def on_recording_done(request: Request) -> dict[str, str]:
-    """Pub/Sub push メッセージを受け取り、要約パイプラインを起動する。"""
-    envelope = await request.json()
-    message = envelope.get("message", {})
-    data = {}
-    if message.get("data"):
-        data = json.loads(base64.b64decode(message["data"]).decode("utf-8"))
-    log.info("recording_event", payload=data)
+    """Pub/Sub push メッセージを受け取り、要約パイプラインを実行する。"""
+    payload = _decode_pubsub(await request.json())
+    log.info("recording_event", payload=payload)
+    if not payload:
+        return {"status": "ignored"}
 
-    # TODO(#): パイプライン実装
-    #   1. STT: transcription.transcribe_track × 話者数 → merge_tracks
-    #   2. meeting_agent で要約 → Discord #要約 へ投稿
-    #   3. feedback_agent で個人FB → 各人へ DM
-    #   4. Firestore に保存
-    return {"status": "accepted"}
+    event = RecordingEvent(**payload)
+    await run_pipeline(event)
+    return {"status": "done", "meeting_id": event.meeting_id}
