@@ -8,6 +8,7 @@ dependencies = [
     "i2-storage",
     "py-cord[voice]>=2.6",
     "google-cloud-pubsub>=2.21",
+    "certifi>=2024.2",
 ]
 
 [build-system]

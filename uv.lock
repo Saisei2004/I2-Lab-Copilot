@@ -986,6 +986,7 @@ name = "i2-discord-bot"
 version = "0.1.0"
 source = { editable = "apps/discord-bot" }
 dependencies = [
+    { name = "certifi" },
     { name = "google-cloud-pubsub" },
     { name = "i2-core" },
     { name = "i2-storage" },
@@ -994,6 +995,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "certifi", specifier = ">=2024.2" },
     { name = "google-cloud-pubsub", specifier = ">=2.21" },
     { name = "i2-core", editable = "packages/core" },
     { name = "i2-storage", editable = "packages/storage" },
